@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1220">
+  <title>Smart Helmet | Industrial Safety</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet">
+  <link href="{{ url_for('static', filename='styles.css') }}" rel="stylesheet">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-icon"><i class="bi bi-shield-check"></i></div>
+        <div><div class="brand-name">HELMET<span>GUARD</span></div><small>INDUSTRIAL SAFETY</small></div>
+      </div>
+      <div class="side-label">WORKSPACE</div>
+      <a class="nav-link active" href="#overview"><i class="bi bi-grid-1x2-fill"></i> Overview</a>
+      <a class="nav-link" href="#alerts"><i class="bi bi-bell-fill"></i> Safety alerts</a>
+      <a class="nav-link" href="#location"><i class="bi bi-geo-alt-fill"></i> Worker location</a>
+      <a class="nav-link" href="#history"><i class="bi bi-clock-history"></i> Sensor history</a>
+      <div class="sidebar-bottom">
+        <div class="connection-dot"></div>
+        <div><strong id="connection-label">Connecting…</strong><small id="last-updated">Waiting for first reading</small></div>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div>
+          <div class="eyebrow">SAFETY OPERATIONS / LIVE MONITOR</div>
+          <h1>Smart Helmet Dashboard</h1>
+          <p class="subtitle">Real-time environmental and impact monitoring</p>
+        </div>
+        <div class="topbar-actions">
+          <span class="live-pill"><span class="pulse"></span> LIVE MONITORING</span>
+          <button id="refresh-btn" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-clockwise me-1"></i> Refresh</button>
+        </div>
+      </header>
+
+      <div id="global-error" class="alert alert-warning d-none" role="alert"></div>
+
+      <section id="overview">
+        <div class="section-heading">
+          <div><h2>Sensor overview</h2><p>Latest available readings from the connected device</p></div>
+          <span class="section-tag"><i class="bi bi-arrow-repeat me-1"></i> Updates every 5 seconds</span>
+        </div>
+        <div class="row g-3 sensor-grid">
+          <div class="col-12 col-sm-6 col-xl-3"><article class="sensor-card sensor-gas">
+            <div class="sensor-top"><span class="sensor-icon"><i class="bi bi-wind"></i></span><span class="sensor-status" id="gas-status">WAITING</span></div>
+            <div class="sensor-label">Gas level</div><div class="sensor-value" id="gas-value">— <small>units</small></div>
+            <div class="sensor-foot"><span>Threshold</span><strong>50</strong></div><div class="meter"><span id="gas-meter"></span></div>
+          </article></div>
+          <div class="col-12 col-sm-6 col-xl-3"><article class="sensor-card sensor-temp">
+            <div class="sensor-top"><span class="sensor-icon"><i class="bi bi-thermometer-half"></i></span><span class="sensor-status" id="temperature-status">WAITING</span></div>
+            <div class="sensor-label">Temperature</div><div class="sensor-value" id="temperature-value">— <small>°C</small></div>
+            <div class="sensor-foot"><span>Threshold</span><strong>45 °C</strong></div><div class="meter"><span id="temperature-meter"></span></div>
+          </article></div>
+          <div class="col-12 col-sm-6 col-xl-3"><article class="sensor-card sensor-humidity">
+            <div class="sensor-top"><span class="sensor-icon"><i class="bi bi-droplet-half"></i></span><span class="sensor-status" id="humidity-status">WAITING</span></div>
+            <div class="sensor-label">Humidity</div><div class="sensor-value" id="humidity-value">— <small>%</small></div>
+            <div class="sensor-foot"><span>Threshold</span><strong>85%</strong></div><div class="meter"><span id="humidity-meter"></span></div>
+          </article></div>
+          <div class="col-12 col-sm-6 col-xl-3"><article class="sensor-card sensor-force">
+            <div class="sensor-top"><span class="sensor-icon"><i class="bi bi-activity"></i></span><span class="sensor-status" id="force-status">WAITING</span></div>
+            <div class="sensor-label">Impact / force</div><div class="sensor-value" id="force-value">— <small>units</small></div>
+            <div class="sensor-foot"><span>Threshold</span><strong>50</strong></div><div class="meter"><span id="force-meter"></span></div>
+          </article></div>
+        </div>
+      </section>
+
+      <section class="row g-3 mt-1">
+        <div class="col-12 col-xl-5" id="alerts">
+          <article class="panel risk-panel h-100">
+            <div class="panel-heading"><div><h3>Risk assessment</h3><p>Threshold-based status classification</p></div><i class="bi bi-shield-exclamation panel-icon"></i></div>
+            <div class="risk-display risk-unknown" id="risk-display">
+              <span class="risk-symbol"><i class="bi bi-shield"></i></span>
+              <div><small>CURRENT RISK LEVEL</small><div id="risk-level">UNKNOWN</div></div>
+            </div>
+            <div class="risk-scale">
+              <span><i class="scale-dot normal"></i> Normal</span><span><i class="scale-dot medium"></i> Medium</span>
+              <span><i class="scale-dot high"></i> High</span><span><i class="scale-dot critical"></i> Critical</span>
+            </div>
+            <div class="panel-divider"></div>
+            <div class="panel-heading compact"><div><h3>Active alerts</h3><p id="alert-count">No alerts evaluated yet</p></div><span class="alert-counter" id="alert-badge">0</span></div>
+            <div id="alerts-list" class="alerts-list"><div class="empty-state"><i class="bi bi-check2-circle"></i><span>Waiting for sensor data…</span></div></div>
+          </article>
+        </div>
+        <div class="col-12 col-xl-7">
+          <article class="panel h-100">
+            <div class="panel-heading"><div><h3>Live sensor trends</h3><p>Recent samples recorded by the dashboard</p></div><span class="chart-chip"><i class="bi bi-graph-up-arrow me-1"></i> LIVE</span></div>
+            <div class="chart-wrap"><canvas id="trend-chart"></canvas></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="row g-3 mt-1">
+        <div class="col-12 col-xl-5" id="location">
+          <article class="panel">
+            <div class="panel-heading"><div><h3>Worker location</h3><p>Last GPS coordinates received from Blynk</p></div><i class="bi bi-geo-alt panel-icon"></i></div>
+            <div id="map" class="map-box"></div>
+            <div class="coordinates"><span><i class="bi bi-crosshair2 me-2"></i>Coordinates</span><strong id="gps-value">Location unavailable</strong></div>
+            <div class="map-note" id="gps-note">GPS format depends on your configured Blynk datastream.</div>
+          </article>
+        </div>
+        <div class="col-12 col-xl-7">
+          <article class="panel">
+            <div class="panel-heading"><div><h3>Risk distribution</h3><p>Recorded risk categories in sensor history</p></div><i class="bi bi-pie-chart panel-icon"></i></div>
+            <div class="chart-wrap risk-chart-wrap"><canvas id="risk-chart"></canvas></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel history-panel mt-4" id="history">
+        <div class="panel-heading history-heading">
+          <div><h3>Sensor history</h3><p id="history-subtitle">Recent readings saved locally by the Python backend</p></div>
+          <div class="history-actions">
+            <select id="history-limit" class="form-select form-select-sm" aria-label="History rows">
+              <option value="50">Last 50</option><option value="100" selected>Last 100</option><option value="500">Last 500</option>
+            </select>
+            <a href="/api/export.csv" class="btn btn-primary btn-sm"><i class="bi bi-download me-1"></i> Export CSV</a>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-dark table-hover align-middle mb-0">
+            <thead><tr><th>Timestamp</th><th>Gas</th><th>Temp (°C)</th><th>Humidity (%)</th><th>Force</th><th>Risk level</th></tr></thead>
+            <tbody id="history-body"><tr><td colspan="6" class="text-center table-empty">Waiting for recorded readings…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="table-footer"><span id="table-count">0 records displayed</span><span><i class="bi bi-database me-1"></i> Local CSV storage</span></div>
+      </section>
+
+      <footer class="page-footer">
+        <span><i class="bi bi-shield-check me-1"></i> HelmetGuard Monitoring Prototype</span>
+        <span>Rule-based indicators are not a certified safety system.</span>
+      </footer>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
